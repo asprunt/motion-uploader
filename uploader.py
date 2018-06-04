@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python2
 '''
 Created on 6 Jun 2012
 
@@ -119,12 +119,14 @@ class MotionUploader:
         server.sendmail(self.sender, self.recipient, m+msg)
         server.quit()    
     
-    def upload_video(self, video_file_path):
+    def upload_video(self, video_file_path, preview_image_path=None):
         """Upload a video to the specified folder. Then optionally send an email and optionally delete the local file."""
         folder_id = self._get_folder_id(self.folder)
         
-        media = MediaFileUpload(video_file_path, mimetype='video/avi')
-        response = self.drive_service.files().insert(media_body=media, body={'title':os.path.basename(video_file_path), 'parents':[{u'id': folder_id}]}).execute()
+        media = MediaFileUpload(video_file_path, mimetype='video/mkv')
+        response = self.drive_service.files().insert(media_body=media
+                   , body={'title':os.path.basename(video_file_path)
+                   , 'parents':[{u'id': folder_id}]}).execute()
         #print response
         video_link = response['alternateLink']
                        
@@ -135,7 +137,25 @@ class MotionUploader:
             self._send_email(msg)    
  
         if self.delete_after_upload:
-            os.remove(video_file_path)    
+            os.remove(video_file_path)
+
+        if preview_image_path is not None:
+            media = MediaFileUpload(preview_image_path, mimetype='image/webp')
+            response = self.drive_service.files().insert(media_body=media
+                       , body={'title':os.path.basename(preview_image_path)
+                       , 'parents':[{u'id': folder_id}]}).execute()
+            # Set permissions so the file can be viewed by anyone with the link
+            #service.permissions().insert( fileId=file_id, body=new_permission ).execute()
+            self.drive_service.permissions().insert(
+                fileId=response['id'],
+                body={ 'type': 'anyone', 'role': 'reader', 'withLink': 'true' }
+                ).execute()
+            preview_image_link = response['alternateLink']
+            # This link can be used on a webpage with <img src="">
+            preview_image_link = 'https://drive.google.com/uc?id=' + response['id']
+            video_link = [ video_link , preview_image_link ]
+
+        return video_link    
     
     def upload_snapshot(self, snapshot_file_path):
         """Upload a snapshot to the specified folder. Remove duplicates."""
