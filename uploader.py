@@ -13,7 +13,8 @@ Version 2: 10 Jun 2015 - rewritten for Google oauth2 and apiclient
 import sys
 
 import smtplib
-from datetime import datetime
+from datetime import datetime, timedelta
+from tzlocal import get_localzone
 
 import os.path
 import logging
@@ -177,7 +178,49 @@ class MotionUploader:
         
         public_url = 'https://googledrive.com/host/%s/' % folder_id
         print public_url + os.path.basename(snapshot_file_path)          
-                      
+
+    def cleanup(self,days_to_keep=30,dry_run=False):
+        # Files older than days_to_keep will be deleted
+        # If dry_run is set to true, no files will be deleted and max_res files
+        # that would have been deleted will be listed
+
+        # Offset back the desired number of days and build query string
+        mod = datetime.now(get_localzone())- timedelta(days=days_to_keep)
+        query_string = 'modifiedDate < \'' + mod.isoformat('T') + '\''
+        
+        # Get the ID for the folder where files are uploaded
+        folder_id = self._get_folder_id(self.folder)
+
+        # Find files in that folder older than specified date
+        # The while loop is necessary because the API will only return so many results at a time.
+        # This means this code cannot readily do a true dry-run
+        max_res = 200 # maximum number of results
+        n_blk = max_res
+
+        del_count = 0 # initialize deletion counter
+        while n_blk==max_res:
+            children = self.drive_service.children().list(q=query_string
+                                                          ,folderId=folder_id, maxResults=max_res).execute()
+            n_blk = len( children.get('items') )
+            
+            if n_blk:
+                # Loop over the files
+                if dry_run:
+                    print '{} {} {}'.format('First', n_blk , 'files that would be deleted')
+                else:
+                    del_count = del_count+n_blk
+                
+                for child in children.get('items', []):
+                    if dry_run:
+                        file = self.drive_service.files().get(fileId=child['id']).execute()
+                        print 'Title: %s' % file['title']
+                        n_blk=max_res-1 # set to exit while loop, not doing this would result in infinite loop
+                    else:
+                        self.drive_service.files().delete(fileId=child['id']).execute()
+
+        if del_count!=0:
+            print '{} {}'.format(del_count,'files deleted.')
+                          
 if __name__ == '__main__':         
     try:
         logging.basicConfig(level=logging.ERROR)

@@ -112,6 +112,10 @@ def main():
     send_email( r'Motion Summary at ' +  datetime.now().strftime("%I:%M%p on %B %d, %Y") 
     , msg_body + footer_text, config_file )
     os.remove(cached_message_file)
+
+    # Remove files older then 30 days
+    MotionUploader(config_file).cleanup(30,False)
+
   else:
     print('Unexpected switch')
   
