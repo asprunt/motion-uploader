@@ -25,12 +25,12 @@ from oauth2client import client
 from oauth2client.file import Storage
 from googleapiclient.http import MediaFileUpload
 
-import ConfigParser
+import configparser
 
 class MotionUploader:
     def __init__(self, config_file_path):
         # Load config
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(config_file_path)
         
         # OAuth folder
@@ -90,10 +90,10 @@ class MotionUploader:
         
             auth_uri = flow.step1_get_authorize_url()
             
-            print 'Go to this link in your browser:'
-            print auth_uri
+            print('Go to this link in your browser:')
+            print(auth_uri)
         
-            auth_code = raw_input('Enter the auth code: ')
+            auth_code = input('Enter the auth code: ')
             credentials = flow.step2_exchange(auth_code)
             storage.put(credentials)
                
@@ -127,7 +127,7 @@ class MotionUploader:
         media = MediaFileUpload(video_file_path, mimetype='video/mkv')
         response = self.drive_service.files().insert(media_body=media
                    , body={'title':os.path.basename(video_file_path)
-                   , 'parents':[{u'id': folder_id}]}).execute()
+                   , 'parents':[{'id': folder_id}]}).execute()
         #print response
         video_link = response['alternateLink']
                        
@@ -144,7 +144,7 @@ class MotionUploader:
             media = MediaFileUpload(preview_image_path, mimetype='image/webp')
             response = self.drive_service.files().insert(media_body=media
                        , body={'title':os.path.basename(preview_image_path)
-                       , 'parents':[{u'id': folder_id}]}).execute()
+                       , 'parents':[{'id': folder_id}]}).execute()
             # Set permissions so the file can be viewed by anyone with the link
             #service.permissions().insert( fileId=file_id, body=new_permission ).execute()
             self.drive_service.permissions().insert(
@@ -170,14 +170,14 @@ class MotionUploader:
                 self.drive_service.files().delete(fileId=file_id).execute()
         #Now upload the new one
         media = MediaFileUpload(snapshot_file_path, mimetype='image/jpeg')
-        self.drive_service.files().insert(media_body=media, body={'title':file_name, 'parents':[{u'id': folder_id}]}).execute()          
+        self.drive_service.files().insert(media_body=media, body={'title':file_name, 'parents':[{'id': folder_id}]}).execute()          
                       
     def get_snapshot_url(self, snapshot_file_path):
         """Print out the public url for this snapshot."""
         folder_id = self._get_folder_id(self.snapshot_folder)
         
         public_url = 'https://googledrive.com/host/%s/' % folder_id
-        print public_url + os.path.basename(snapshot_file_path)          
+        print(public_url + os.path.basename(snapshot_file_path))          
 
     def cleanup(self,days_to_keep=30,dry_run=False):
         # Files older than days_to_keep will be deleted
@@ -206,20 +206,20 @@ class MotionUploader:
             if n_blk:
                 # Loop over the files
                 if dry_run:
-                    print '{} {} {}'.format('First', n_blk , 'files that would be deleted')
+                    print('{} {} {}'.format('First', n_blk , 'files that would be deleted'))
                 else:
                     del_count = del_count+n_blk
                 
                 for child in children.get('items', []):
                     if dry_run:
                         file = self.drive_service.files().get(fileId=child['id']).execute()
-                        print 'Title: %s' % file['title']
+                        print('Title: %s' % file['title'])
                         n_blk=max_res-1 # set to exit while loop, not doing this would result in infinite loop
                     else:
                         self.drive_service.files().delete(fileId=child['id']).execute()
 
         if del_count!=0:
-            print '{} {}'.format(del_count,'files deleted.')
+            print('{} {}'.format(del_count,'files deleted.'))
                           
 if __name__ == '__main__':         
     try:

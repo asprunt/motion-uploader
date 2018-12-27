@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 """
 Created on Sun Jul 15 13:27:20 2018
@@ -6,7 +6,7 @@ Created on Sun Jul 15 13:27:20 2018
 @author: asprunt
 """
 
-import ConfigParser
+import configparser
 import argparse
 import numpy as np
 import os
@@ -138,13 +138,13 @@ def draw_box2( image_in , boxes , scores, classes , id_to_label , plt_classes ):
                 # Write the class label at the top left of the box
                 cv2.putText( image_in 
                             ,id_to_label.get(p_class[0])
-                            ,(top_left[0], top_left[1]-image_height/40)
+                            ,(top_left[0], int(top_left[1]-image_height/40))
                             , font,1,hex_to_rgb(color_cycle[ii % len(color_cycle)]),2) #,cv2.LINE_AA)
                 
                 # Write the score in the lower right
                 cv2.putText( image_in 
                             ,"{:.2f}".format(scores[0,p_ind])
-                            ,(bottom_right[0]+image_width/100 , bottom_right[1])
+                            ,(int(bottom_right[0]+image_width/100) , bottom_right[1])
                             , font,1,hex_to_rgb(color_cycle[ii % len(color_cycle)]),2) #,cv2.LINE_AA)
                 
                 top_object.append( ( scores[0,p_ind] , id_to_label.get(p_class[0])  )  )
@@ -179,7 +179,7 @@ def load_tf_dict( dict_file ):
             if match:
                 id_to_label[int(match.group(1))] = match.group(2)
             elif len(p)!=0:
-                print 'Warning: should have matched: ' + p
+                print('Warning: should have matched: ' + p)
     return id_to_label
 
 def isgrayscale( image_in ):
@@ -201,16 +201,16 @@ def store_results( res_file_prefix , classes , scores):
         os.makedirs (dir_name)
     
     # Files to store the results in
-    f_class_h = file(res_file_prefix + '_classes.txt', 'a')
-    f_score_h = file(res_file_prefix + '_scores.txt', 'a')
+    f_class_h = open(res_file_prefix + '_classes.txt','ab')
+    f_score_h = open(res_file_prefix + '_scores.txt', 'ab')
     
     # Store the class labels
     np.savetxt(f_class_h, classes , newline=' ', delimiter=',')
-    f_class_h.write('\n')
+    f_class_h.write('\n'.encode("utf-8"))
     
     # Store the scores
     np.savetxt(f_score_h, scores , newline=' ', delimiter=',')
-    f_score_h.write('\n')
+    f_score_h.write('\n'.encode("utf-8"))
     
     # Close both files
     f_class_h.close()
@@ -218,7 +218,7 @@ def store_results( res_file_prefix , classes , scores):
 
 def get_config_details( config_file_path ):
     """Load configuration information from a JSON file"""
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(config_file_path)    
     return config
 
@@ -273,8 +273,8 @@ def batch_process_images( config_details , file_list ):
     its detection threshold."""
     plt_classes = []
     for cls, thresh in zip( config_details.get('object_detection','det_classes').split(',') , 
-        map(float,config_details.get('object_detection','det_thresholds').split(',')) ):
-            key = next(key for key, value in id_to_label.items() if value == cls.strip())
+        list(map(float,config_details.get('object_detection','det_thresholds').split(','))) ):
+            key = next(key for key, value in list(id_to_label.items()) if value == cls.strip())
             plt_classes.append( (key , thresh) )
     
     # Loop over each image
@@ -305,7 +305,7 @@ def batch_process_images( config_details , file_list ):
             
             # Use box drawing function to apply detection threshold criteria
             # and then to draw boxes (if appropriate)
-            (object_detected , image_np ) = draw_box2( image_np 
+            (object_detected , image_np , top_object) = draw_box2( image_np 
                     , boxes, scores , classes, id_to_label, plt_classes)
             
             # If an object was detected, save a copy of it (with bounding boxes)
@@ -351,7 +351,7 @@ def batch_process_images( config_details , file_list ):
                 try:
                     os.symlink(image_path,out_path)
                 except:
-                    print image_path
+                    print(image_path)
 
 def plot_histograms( config_details , classes ):
     """Loads archived object detection data and plots histograms for the
@@ -375,7 +375,7 @@ def plot_histograms( config_details , classes ):
         
         # This reverses the class dictionary to go from class names (in the 
         # config file) to class IDs (which is how the results are stored)
-        key = next(key for key, value in id_to_label.items() if value == cls.strip())
+        key = next(key for key, value in list(id_to_label.items()) if value == cls.strip())
         
         # if there are any results for the class, plot them with an appropriate
         # title and axis labels.

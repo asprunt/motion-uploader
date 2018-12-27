@@ -1,10 +1,10 @@
-#!/usr/bin/python2
+#!/usr/bin/python
 
 import os
 from datetime import datetime
 from uploader import MotionUploader
 import argparse
-import ConfigParser
+import configparser
 import simple_detection as sd
 import cv2
 import numpy as np
@@ -19,7 +19,7 @@ def send_email(subject, body, config_file_path, files=None, send_to=None):
 
     assert isinstance(files,list) | (files is None)
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(config_file_path)
     gmail_user = config.get('gmail', 'user') 
     gmail_pwd = config.get('gmail', 'password')
@@ -74,7 +74,7 @@ def main():
     
     config_file = args.config_file
 
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(config_file)
     cached_message_file = config.get('options', 'cached_message_file') 
     
@@ -103,8 +103,8 @@ def main():
         plt_classes = []
         plt_class_ids = []
         for cls, thresh in zip( config_details.get('object_detection','det_classes').split(',') , 
-            map(float,config_details.get('object_detection','det_thresholds').split(',')) ):
-                key = next(key for key, value in id_to_label.items() if value == cls.strip())
+            list(map(float,config_details.get('object_detection','det_thresholds').split(','))) ):
+                key = next(key for key, value in list(id_to_label.items()) if value == cls.strip())
                 plt_classes.append( (key , thresh) )
                 plt_class_ids.append( key )
         plt_class_ids = np.asarray(plt_class_ids)
@@ -185,7 +185,7 @@ def main():
                 hs.write(link_text)
                 hs.close()
                 
-                if object_detected:
+                if args.object and object_detected:
                     # Send out a nicely formatted email
                     
                     # Default subject
